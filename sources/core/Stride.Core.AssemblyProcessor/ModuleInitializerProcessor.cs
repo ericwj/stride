@@ -42,7 +42,7 @@ namespace Stride.Core.AssemblyProcessor
             var staticConstructor = OpenModuleConstructor(assembly, out returnInstruction);
 
             var il = staticConstructor.Body.GetILProcessor();
-            
+
             var newReturnInstruction = Instruction.Create(returnInstruction.OpCode);
             newReturnInstruction.Operand = returnInstruction.Operand;
 
@@ -53,6 +53,7 @@ namespace Stride.Core.AssemblyProcessor
             foreach (var moduleInitializer in moduleInitializers)
             {
                 il.Append(Instruction.Create(OpCodes.Call, moduleInitializer.Value));
+                APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(ModuleInitializerProcessor), moduleInitializer.Value);
             }
             il.Append(newReturnInstruction);
             staticConstructor.Body.OptimizeMacros();

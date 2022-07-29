@@ -46,14 +46,14 @@ namespace Stride.Core.AssemblyProcessor
             return null;
         }
 
-        public MethodReference GetOrCreateGetPropertyChangedMethod(AssemblyDefinition assembly, TypeDefinition typeDefinition, FieldReference propertyChangedField)
+        public MethodReference GetOrCreateGetPropertyChangedMethod(AssemblyDefinition assembly, TypeDefinition typeDefinition, FieldReference propertyChangedField, AssemblyProcessorContext context)
         {
             var methodReference = GetGetPropertyChangedMethod(assembly, typeDefinition);
             if (methodReference != null)
                 return methodReference;
 
             var method = new MethodDefinition("GetPropertyChanged", MethodAttributes.Family, propertyChangedField.FieldType);
-
+            APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(NotifyPropertyProcessor), method, additionalInfo: "The method was added.");
             var bodyInstructions = method.Body.Instructions;
 
             // return PropertyChanged
@@ -65,7 +65,7 @@ namespace Stride.Core.AssemblyProcessor
 
             return method;
         }
-        
+
         public bool Process(AssemblyProcessorContext context)
         {
             var assembly = context.Assembly;
@@ -99,7 +99,7 @@ namespace Stride.Core.AssemblyProcessor
             var getPropertyMethod = typeTokenInfoEx.Methods.First(x => x.Name == "GetDeclaredProperty" && x.Parameters.Count == 1);
             var getTypeFromHandleMethod = typeType.Methods.First(x => x.Name == "GetTypeFromHandle");
             var getTokenInfoExMethod = CecilExtensions.FindReflectionAssembly(assembly).MainModule.GetTypeResolved("System.Reflection.IntrospectionExtensions").Resolve().Methods.First(x => x.Name == "GetTypeInfo");
-            
+
             var propertyChangedExtendedEventArgsConstructor = assembly.MainModule.ImportReference(propertyChangedExtendedEventArgsType.Methods.First(x => x.IsConstructor));
 
             bool modified = false;
@@ -123,7 +123,8 @@ namespace Stride.Core.AssemblyProcessor
                 if (getPropertyChangedMethod == null)
                 {
                     modified = true;
-                    getPropertyChangedMethod = GetOrCreateGetPropertyChangedMethod(assembly, type, propertyChangedField);
+                    getPropertyChangedMethod = GetOrCreateGetPropertyChangedMethod(assembly, type, propertyChangedField, context);
+                    APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(NotifyPropertyProcessor), getPropertyChangedMethod, additionalInfo: "The method was added.");
                 }
 
                 if (propertyChangedField != null)
@@ -184,6 +185,7 @@ namespace Stride.Core.AssemblyProcessor
                             staticConstructor.Body.GetILProcessor().Append(Instruction.Create(OpCodes.Ret));
 
                             type.Methods.Add(staticConstructor);
+                            APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(NotifyPropertyProcessor), staticConstructor, additionalInfo: "The method was added.");
                         }
 
 
@@ -228,7 +230,7 @@ namespace Stride.Core.AssemblyProcessor
 
                         ilProcessor.Append(newReturnInstruction);
                     }
-                    
+
                     {
                         var ilProcessor = property.SetMethod.Body.GetILProcessor();
                         var returnInstruction = property.SetMethod.Body.Instructions.Last();
@@ -290,6 +292,7 @@ namespace Stride.Core.AssemblyProcessor
                         ilProcessor.Append(Instruction.Create(OpCodes.Nop));
                         ilProcessor.Append(newReturnInstruction);
                         property.SetMethod.Body.OptimizeMacros();
+                        APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(NotifyPropertyProcessor), property.SetMethod);
                     }
                 }
             }

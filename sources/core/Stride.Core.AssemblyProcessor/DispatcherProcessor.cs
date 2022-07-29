@@ -127,7 +127,12 @@ namespace Stride.Core.AssemblyProcessor
                             {
                                 EnsureInitialized(context);
 
-                                changed |= ProcessDelegateAllocation(context, method, pushParameterInstruction);
+                                var currentChanged = ProcessDelegateAllocation(context, method, pushParameterInstruction);
+                                if (currentChanged)
+                                {
+                                    APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(DispatcherProcessor), method);
+                                    if (!changed) changed = true;
+                                }
                             }
                         }
                     }

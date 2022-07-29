@@ -3,7 +3,6 @@
 
 using System.IO;
 using Mono.Cecil;
-using Stride.Core;
 using Stride.Core.Storage;
 
 namespace Stride.Core.AssemblyProcessor

@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using Mono.Cecil;
 using Mono.Options;
-using Stride.Core;
 
 namespace Stride.Core.AssemblyProcessor
 {
@@ -49,6 +48,7 @@ namespace Stride.Core.AssemblyProcessor
             if (File.Exists(symbolFile))
             {
                 app.UseSymbols = true;
+                logger.WriteLine($"[{Path.GetFileName(ExeName)}] Using symbols.");
             }
 
             // Setup output filestream
@@ -109,6 +109,7 @@ namespace Stride.Core.AssemblyProcessor
                 { "o|output=", "Output file name", v => localOutputFilePath = v },
                 { "p|platform=", "The platform (Windows, Android, iOS)", v => app.Platform = (PlatformType)Enum.Parse(typeof(PlatformType), v) },
                 { "t|targetFramework=", "The .NET target platform (platform specific)", v => app.TargetFramework = v },
+                { "assembly-version", "Changes assembly version attributes.", v => app.AssemblyVersion = true },
                 { "auto-notify-property", "Automatically implements INotifyPropertyChanged", v => app.AutoNotifyProperty = true },
                 { "parameter-key", "Automatically initialize parameter keys in module static constructor", v => app.ParameterKey = true },
                 { "rename-assembly=", "Rename assembly", v => app.NewAssemblyName = v },

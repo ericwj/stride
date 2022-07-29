@@ -117,46 +117,46 @@ namespace Stride.Core.AssemblyProcessor.Serializers
                     switch (elementSerializableTypeInfo.Mode)
                     {
                         case DataSerializerGenericMode.Type:
-                        {
-                            var serializerType = new GenericInstanceType(elementSerializableTypeInfo.SerializerType);
-                            serializerType.GenericArguments.Add(type);
+                            {
+                                var serializerType = new GenericInstanceType(elementSerializableTypeInfo.SerializerType);
+                                serializerType.GenericArguments.Add(type);
 
-                            AddSerializableType(type, serializableTypeInfo = new SerializableTypeInfo(serializerType, true) { ComplexSerializer = elementSerializableTypeInfo.ComplexSerializer }, profile);
-                            break;
-                        }
+                                AddSerializableType(type, serializableTypeInfo = new SerializableTypeInfo(serializerType, true) { ComplexSerializer = elementSerializableTypeInfo.ComplexSerializer }, profile);
+                                break;
+                            }
                         case DataSerializerGenericMode.TypeAndGenericArguments:
-                        {
-                            var serializerType = new GenericInstanceType(elementSerializableTypeInfo.SerializerType);
-                            serializerType.GenericArguments.Add(type);
-                            foreach (var genericArgument in genericInstanceType.GenericArguments)
                             {
-                                // Generate serializer for each generic argument
-                                //GenerateSerializer(genericArgument);
-            
-                                serializerType.GenericArguments.Add(genericArgument);
-                            }
+                                var serializerType = new GenericInstanceType(elementSerializableTypeInfo.SerializerType);
+                                serializerType.GenericArguments.Add(type);
+                                foreach (var genericArgument in genericInstanceType.GenericArguments)
+                                {
+                                    // Generate serializer for each generic argument
+                                    //GenerateSerializer(genericArgument);
 
-                            AddSerializableType(type, serializableTypeInfo = new SerializableTypeInfo(serializerType, true) { ComplexSerializer = elementSerializableTypeInfo.ComplexSerializer }, profile);
-                            break;
-                        }
+                                    serializerType.GenericArguments.Add(genericArgument);
+                                }
+
+                                AddSerializableType(type, serializableTypeInfo = new SerializableTypeInfo(serializerType, true) { ComplexSerializer = elementSerializableTypeInfo.ComplexSerializer }, profile);
+                                break;
+                            }
                         case DataSerializerGenericMode.GenericArguments:
-                        {
-                            var serializerType = new GenericInstanceType(elementSerializableTypeInfo.SerializerType);
-                            foreach (var genericArgument in genericInstanceType.GenericArguments)
                             {
-                                // Generate serializer for each generic argument
-                                //GenerateSerializer(genericArgument);
-            
-                                serializerType.GenericArguments.Add(genericArgument);
-                            }
+                                var serializerType = new GenericInstanceType(elementSerializableTypeInfo.SerializerType);
+                                foreach (var genericArgument in genericInstanceType.GenericArguments)
+                                {
+                                    // Generate serializer for each generic argument
+                                    //GenerateSerializer(genericArgument);
 
-                            AddSerializableType(type, serializableTypeInfo = new SerializableTypeInfo(serializerType, true) { ComplexSerializer = elementSerializableTypeInfo.ComplexSerializer }, profile);
-                            break;
-                        }
+                                    serializerType.GenericArguments.Add(genericArgument);
+                                }
+
+                                AddSerializableType(type, serializableTypeInfo = new SerializableTypeInfo(serializerType, true) { ComplexSerializer = elementSerializableTypeInfo.ComplexSerializer }, profile);
+                                break;
+                            }
                         default:
                             throw new NotImplementedException();
                     }
-            
+
                     if (elementSerializableTypeInfo.ComplexSerializer)
                     {
                         ProcessComplexSerializerMembers(type, serializableTypeInfo);
@@ -178,7 +178,7 @@ namespace Stride.Core.AssemblyProcessor.Serializers
             // Part after that is only if a serializer is absolutely necessary. This is skipped when scanning normal assemblies type that might have nothing to do with serialization.
             if (!force)
                 return null;
-            
+
             // Non instantiable type? (object, interfaces, abstract classes)
             // Serializer can be null since they will be inherited anyway (handled through MemberSerializer)
             var resolvedType = type.Resolve();
@@ -573,7 +573,7 @@ namespace Stride.Core.AssemblyProcessor.Serializers
             /// True if serializer is inherited (i.e. DataSerializer(Inherited == true)).
             /// </summary>
             public bool Inherited;
-            
+
             /// <summary>
             /// True if it's a complex serializer.
             /// </summary>

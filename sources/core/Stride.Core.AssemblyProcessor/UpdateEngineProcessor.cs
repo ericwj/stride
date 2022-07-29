@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -19,6 +20,9 @@ namespace Stride.Core.AssemblyProcessor
 {
     internal partial class UpdateEngineProcessor : ICecilSerializerProcessor
     {
+        private readonly TextWriter logger;
+        public UpdateEngineProcessor(TextWriter logger) => this.logger = logger;
+
         private MethodDefinition updatableFieldGenericCtor;
         private MethodDefinition updatableListUpdateResolverGenericCtor;
         private MethodDefinition updatableArrayUpdateResolverGenericCtor;

@@ -1,7 +1,6 @@
 // Copyright (c) .NET Foundation and Contributors (https://dotnetfoundation.org/ & https://stride3d.net) and Silicon Studio Corp. (https://www.siliconstudio.co.jp)
 // Distributed under the MIT license. See the LICENSE.md file in the project root for more information.
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
@@ -28,11 +27,13 @@ namespace Stride.Core.AssemblyProcessor
             var gitCommitShortId = "0";
 
             // Use epoch time to get a "unique" build number (different each time)
-            var build = (long)DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalSeconds;
+            var build = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             // Get current AssemblyVersion and clone it
             var version = assembly.Name.Version;
             var fileVersion = string.Format("{0}.{1}.{2}.{3}", version.Major, version.Minor, build, gitCommitShortId);
+            var fullTypeName = typeof(AssemblyFileVersionAttribute).FullName;
+            var attributeName = fullTypeName.Substring(0, fullTypeName.Length - nameof(Attribute).Length);
 
             // Copy build/revision to the AssemblyFileVersion
             bool fileVersionUpdated = false;
@@ -41,9 +42,11 @@ namespace Stride.Core.AssemblyProcessor
                 var customAttribute = assembly.CustomAttributes[i];
                 if (customAttribute.AttributeType.FullName == typeof(AssemblyFileVersionAttribute).FullName)
                 {
+                    var was = customAttribute.ConstructorArguments[0].Value?.ToString();
                     customAttribute.ConstructorArguments.Clear();
                     customAttribute.ConstructorArguments.Add(new CustomAttributeArgument(stringType, fileVersion));
                     fileVersionUpdated = true;
+                    APUtilities.Diagnostic(context.Log, error: false, diagnostic: null, nameof(AssemblyVersionProcessor), $"Modified [{attributeName}(\"{was}\")] to [{attributeName}(\"{fileVersion}\")]");
                     break;
                 }
             }
@@ -53,6 +56,7 @@ namespace Stride.Core.AssemblyProcessor
                 var assemblyFileVersion = new CustomAttribute(assemblyMethodConstructor);
                 assemblyFileVersion.ConstructorArguments.Add(new CustomAttributeArgument(stringType, fileVersion));
                 assembly.CustomAttributes.Add(assemblyFileVersion);
+                APUtilities.Diagnostic(context.Log, error: false, diagnostic: null, nameof(AssemblyVersionProcessor), $"Added [{attributeName}(\"{fileVersion}\")]");
             }
 
             return true;

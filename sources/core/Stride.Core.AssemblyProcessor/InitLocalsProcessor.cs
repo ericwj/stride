@@ -25,6 +25,8 @@ namespace Stride.Core.AssemblyProcessor
 
                         method.Body.InitLocals = false;
                         changed = true;
+                        APUtilities.Patched(context.Log, error: true, diagnostic: null, nameof(InitLocalsProcessor),
+                            method, additionalInfo: "Use [SkipLocalsInit] instead.");
                     }
                 }
             }

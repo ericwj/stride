@@ -62,6 +62,7 @@ namespace Stride.Core.AssemblyProcessor
                     TypeAttributes.Public | TypeAttributes.Sealed | TypeAttributes.Abstract,
                     assembly.MainModule.TypeSystem.Object);
                 assembly.MainModule.Types.Add(assemblyScanType);
+                APUtilities.Diagnostic(context.Log, error: false, diagnostic: null, nameof(AssemblyScanProcessor), $"Added type \"{assemblyScanType}\".");
 
                 // Create Initialize method
                 var initializeMethod = new MethodDefinition("Initialize",

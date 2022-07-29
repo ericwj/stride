@@ -23,7 +23,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -31,7 +30,6 @@ using System.Runtime.CompilerServices;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
-using Stride.Core;
 using CallSite = Mono.Cecil.CallSite;
 using MethodAttributes = Mono.Cecil.MethodAttributes;
 
@@ -43,15 +41,19 @@ namespace Stride.Core.AssemblyProcessor
         private AssemblyDefinition assembly;
         private TypeReference voidPointerType;
         private TypeReference intType;
-        
+        private AssemblyProcessorContext context;
+
+        private void Patched(MethodReference method, Instruction instruction = null, bool useAnySequencePoint = true, [CallerMemberName] string caller = null)
+            => APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(InteropProcessor), method, instruction, useAnySequencePoint, caller);
         public bool Process(AssemblyProcessorContext context)
         {
+            this.context = context;
             this.assembly = context.Assembly;
             // Import void* and int32 from assembly using mscorlib specific version (2.0 or 4.0 depending on assembly)
             voidPointerType = new PointerType(assembly.MainModule.TypeSystem.Void);
             intType = assembly.MainModule.TypeSystem.Int32;
 
-            context.Log.WriteLine($"Patch for assembly [{assembly.FullName}]");
+            // context.Log.WriteLine($"[{nameof(InteropProcessor)}] Patch for assembly [{assembly.FullName}]");
             foreach (var type in assembly.MainModule.Types)
                 PatchType(type);
 
@@ -105,6 +107,7 @@ namespace Stride.Core.AssemblyProcessor
                     // If a ret instruction is already present, just add the method to call before
                     ilProcessor.InsertBefore(retInstruction, callMethod);
                 }
+                Patched(method);
             }
         }
 
@@ -117,6 +120,8 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method to patch</param>
         private void CreateWriteMethod(MethodDefinition method)
         {
+            Patched(method);
+
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -147,7 +152,7 @@ namespace Stride.Core.AssemblyProcessor
             gen.Emit(OpCodes.Ldloc_0);
 
             // Emit cpblk
-            EmitCpblk(method, gen);
+            EmitCpblk(method, gen, topLevel: false);
 
             // Return pDest + totalSize
             gen.Emit(OpCodes.Ldloc_0);
@@ -195,6 +200,7 @@ namespace Stride.Core.AssemblyProcessor
             var variable = ilProcessor.Body.Variables[variableIndex];
             variable.VariableType = variable.VariableType.MakePinnedType();
 
+            Patched(method, previousInstruction);
             ilProcessor.Remove(previousInstruction);
             ilProcessor.Remove(fixedtoPatch);
         }
@@ -233,6 +239,7 @@ namespace Stride.Core.AssemblyProcessor
                     ldlocFixed = ilProcessor.Create(OpCodes.Ldloc, index);
                     break;
             }
+            Patched(method, fixedtoPatch);
             ilProcessor.InsertBefore(fixedtoPatch, stlocFixed);
             ilProcessor.Replace(fixedtoPatch, ldlocFixed);
         }
@@ -241,11 +248,13 @@ namespace Stride.Core.AssemblyProcessor
         {
             var paramT = ((GenericInstanceMethod)fixedtoPatch.Operand).GenericArguments[0];
             var copyInstruction = ilProcessor.Create(OpCodes.Ldobj, paramT);
+            Patched(method, fixedtoPatch);
             ilProcessor.Replace(fixedtoPatch, copyInstruction);
         }
 
         private void ReplaceCopyInline(MethodDefinition method, ILProcessor ilProcessor, Instruction fixedtoPatch)
         {
+            Patched(method, fixedtoPatch);
             var paramT = ((GenericInstanceMethod)fixedtoPatch.Operand).GenericArguments[0];
             var copyInstruction = ilProcessor.Create(OpCodes.Cpobj, paramT);
             ilProcessor.Replace(fixedtoPatch, copyInstruction);
@@ -253,6 +262,7 @@ namespace Stride.Core.AssemblyProcessor
 
         private void ReplaceSizeOfStructGeneric(MethodDefinition method, ILProcessor ilProcessor, Instruction fixedtoPatch)
         {
+            Patched(method, fixedtoPatch);
             var paramT = ((GenericInstanceMethod)fixedtoPatch.Operand).GenericArguments[0];
             var copyInstruction = ilProcessor.Create(OpCodes.Sizeof, paramT);
             ilProcessor.Replace(fixedtoPatch, copyInstruction);
@@ -260,6 +270,7 @@ namespace Stride.Core.AssemblyProcessor
 
         private void ReplacePinStructGeneric(MethodDefinition method, ILProcessor ilProcessor, Instruction pinToPatch)
         {
+            Patched(method, pinToPatch);
             // Next instruction should be a store to the variable that should be pinned
             var nextStoreInstruction = pinToPatch.Next;
             int variableIndex;
@@ -326,12 +337,14 @@ namespace Stride.Core.AssemblyProcessor
 
             var sizeOfInst = ilProcessor.Create(OpCodes.Sizeof, paramT);
 
+            Patched(method, incrementPinnedToPatch);
             ilProcessor.Replace(incrementPinnedToPatch, sizeOfInst);
             ilProcessor.InsertAfter(sizeOfInst, ilProcessor.Create(OpCodes.Add));
         }
 
         private void ReplaceAddPinnedStructGeneric(MethodDefinition method, ILProcessor ilProcessor, Instruction incrementPinnedToPatch)
         {
+            Patched(method, incrementPinnedToPatch);
             var paramT = ((GenericInstanceMethod)incrementPinnedToPatch.Operand).GenericArguments[0];
 
             var sizeOfInst = ilProcessor.Create(OpCodes.Sizeof, paramT);
@@ -351,6 +364,7 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method cast.</param>
         private void CreateCastMethod(MethodDefinition method)
         {
+            Patched(method);
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -371,6 +385,7 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method cast array.</param>
         private void CreateCastArrayMethod(MethodDefinition method)
         {
+            Patched(method);
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -417,6 +432,7 @@ namespace Stride.Core.AssemblyProcessor
                     break;
             }
 
+            Patched(method, fixedtoPatch);
             var instructionLdci40 = ilProcessor.Create(OpCodes.Ldc_I4_0);
             ilProcessor.InsertBefore(fixedtoPatch, instructionLdci40);
             var instructionLdElema = ilProcessor.Create(OpCodes.Ldelema, paramT);
@@ -434,6 +450,7 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method copy struct.</param>
         private void CreateWriteRangeMethod(MethodDefinition method)
         {
+            Patched(method);
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -468,7 +485,7 @@ namespace Stride.Core.AssemblyProcessor
             gen.Emit(OpCodes.Ldloc_0);
 
             // Emit cpblk
-            EmitCpblk(method, gen);
+            EmitCpblk(method, gen, topLevel: false);
 
             // Return pDest + totalSize
             gen.Emit(OpCodes.Ldloc_0);
@@ -489,6 +506,7 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method copy struct.</param>
         private void CreateReadMethod(MethodDefinition method)
         {
+            Patched(method);
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -542,6 +560,7 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method copy struct.</param>
         private void CreateReadRawMethod(MethodDefinition method)
         {
+            Patched(method);
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -550,7 +569,6 @@ namespace Stride.Core.AssemblyProcessor
 
             // Push (1) pSrc for memcpy
             gen.Emit(OpCodes.Cpobj);
-
         }
 
         /// <summary>
@@ -562,6 +580,7 @@ namespace Stride.Core.AssemblyProcessor
         /// <param name="method">The method copy struct.</param>
         private void CreateReadRangeMethod(MethodDefinition method)
         {
+            Patched(method);
             method.Body.Instructions.Clear();
             method.Body.InitLocals = true;
 
@@ -597,7 +616,7 @@ namespace Stride.Core.AssemblyProcessor
             gen.Emit(OpCodes.Ldloc_0);
 
             // Emit cpblk
-            EmitCpblk(method, gen);
+            EmitCpblk(method, gen, topLevel: false);
 
             // Return pDest + totalSize
             gen.Emit(OpCodes.Ldloc_0);
@@ -615,12 +634,13 @@ namespace Stride.Core.AssemblyProcessor
         /// public static unsafe void memcpy(void* pDest, void* pSrc, int count)
         /// </code>
         /// </summary>
-        /// <param name="methodCopyStruct">The method copy struct.</param>
-        private void CreateMemcpy(MethodDefinition methodCopyStruct)
+        /// <param name="method">The method copy struct.</param>
+        private void CreateMemcpy(MethodDefinition method)
         {
-            methodCopyStruct.Body.Instructions.Clear();
+            Patched(method);
+            method.Body.Instructions.Clear();
 
-            var gen = methodCopyStruct.Body.GetILProcessor();
+            var gen = method.Body.GetILProcessor();
 
             gen.Emit(OpCodes.Ldarg_0);
             gen.Emit(OpCodes.Ldarg_1);
@@ -638,12 +658,13 @@ namespace Stride.Core.AssemblyProcessor
         /// public static unsafe void memset(void* pDest, byte value, int count)
         /// </code>
         /// </summary>
-        /// <param name="methodSetStruct">The method set struct.</param>
-        private void CreateMemset(MethodDefinition methodSetStruct)
+        /// <param name="method">The method set struct.</param>
+        private void CreateMemset(MethodDefinition method)
         {
-            methodSetStruct.Body.Instructions.Clear();
+            Patched(method);
+            method.Body.Instructions.Clear();
 
-            var gen = methodSetStruct.Body.GetILProcessor();
+            var gen = method.Body.GetILProcessor();
 
             gen.Emit(OpCodes.Ldarg_0);
             gen.Emit(OpCodes.Ldarg_1);
@@ -660,15 +681,15 @@ namespace Stride.Core.AssemblyProcessor
         /// </summary>
         /// <param name="method">The method.</param>
         /// <param name="gen">The gen.</param>
-        private void EmitCpblk(MethodDefinition method, ILProcessor gen)
+        private void EmitCpblk(MethodDefinition method, ILProcessor gen, bool topLevel = true)
         {
+            if (topLevel) Patched(method);
             var cpblk = gen.Create(OpCodes.Cpblk);
             //gen.Emit(OpCodes.Sizeof, voidPointerType);
             //gen.Emit(OpCodes.Ldc_I4_8);
             //gen.Emit(OpCodes.Bne_Un_S, cpblk);
             gen.Emit(OpCodes.Unaligned, (byte)1);       // unaligned to 1
             gen.Append(cpblk);
-
         }
 
         private List<string> GetSharpDXAttributes(MethodDefinition method)
@@ -738,21 +759,19 @@ namespace Stride.Core.AssemblyProcessor
                 var ilProcessor = method.Body.GetILProcessor();
 
                 var instructions = method.Body.Instructions;
-                Instruction instruction = null;
-                Instruction previousInstruction;
+                Instruction instruction;
                 bool changes = false;
                 for (int i = 0; i < instructions.Count; i++)
                 {
-                    previousInstruction = instruction;
                     instruction = instructions[i];
 
                     if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference)
                     {
                         var methodDescription = (MethodReference)instruction.Operand;
 
-                        if (methodDescription is MethodDefinition)
+                        if (methodDescription is MethodDefinition methodDefinition)
                         {
-                            foreach (var customAttribute in ((MethodDefinition)methodDescription).CustomAttributes)
+                            foreach (var customAttribute in methodDefinition.CustomAttributes)
                             {
                                 if (customAttribute.AttributeType.FullName == typeof(ObfuscationAttribute).FullName)
                                 {
@@ -791,6 +810,9 @@ namespace Stride.Core.AssemblyProcessor
 
                                 // Replace instruction
                                 ilProcessor.Replace(instruction, callIInstruction);
+
+                                void Calli(MethodReference md) => Patched(md);
+                                Calli(methodDescription);
                             }
                             else if (methodDescription.DeclaringType.Name == "Interop")
                             {

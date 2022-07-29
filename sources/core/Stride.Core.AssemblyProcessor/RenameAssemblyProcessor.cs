@@ -15,9 +15,15 @@ namespace Stride.Core.AssemblyProcessor
 
         public bool Process(AssemblyProcessorContext context)
         {
-            context.Assembly.Name.Name = assemblyName;
-            context.Assembly.MainModule.Name = assemblyName + ".dll";
+            var ist = (assy: context.Assembly.Name.Name, module: context.Assembly.MainModule.Name);
+            var soll = (assy: assemblyName, module: assemblyName + ".dll");
+            if (ist == soll)
+                return false;
 
+            context.Assembly.Name.Name = soll.assy;
+            context.Assembly.MainModule.Name = soll.module;
+            APUtilities.Diagnostic(context.Log, error: false, diagnostic: null, nameof(RenameAssemblyProcessor),
+                $"Renamed {ist.assy} (Module {ist.module}) to {soll.assy} (Module {soll.module}).");
             return true;
         }
     }

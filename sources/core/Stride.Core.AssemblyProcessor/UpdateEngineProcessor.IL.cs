@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
@@ -20,11 +21,11 @@ namespace Stride.Core.AssemblyProcessor
             // Check "#if IL" directly in the source to easily see what is generated
             GenerateUpdateEngineHelperCode(assembly);
             GenerateUpdatableFieldCode(assembly);
-            new UpdatablePropertyCodeGenerator(assembly).GenerateUpdatablePropertyCode();
-            new UpdatableListCodeGenerator(assembly).GenerateUpdatablePropertyCode();
+            new UpdatablePropertyCodeGenerator(assembly, this).GenerateUpdatablePropertyCode();
+            new UpdatableListCodeGenerator(assembly, this).GenerateUpdatablePropertyCode();
         }
 
-        private static void GenerateUpdateEngineHelperCode(AssemblyDefinition assembly)
+        private void GenerateUpdateEngineHelperCode(AssemblyDefinition assembly)
         {
             var updateEngineHelperType = assembly.MainModule.GetType("Stride.Updater.UpdateEngineHelper");
 
@@ -54,7 +55,7 @@ namespace Stride.Core.AssemblyProcessor
             unbox.Emit(OpCodes.Ret);
         }
 
-        private static void GenerateUpdatableFieldCode(AssemblyDefinition assembly)
+        private void GenerateUpdatableFieldCode(AssemblyDefinition assembly)
         {
             var updatableFieldType = assembly.MainModule.GetType("Stride.Updater.UpdatableField");
             var updatableFieldGenericType = assembly.MainModule.GetType("Stride.Updater.UpdatableField`1");
@@ -81,8 +82,9 @@ namespace Stride.Core.AssemblyProcessor
             setStruct.Emit(OpCodes.Ret);
         }
 
-        private static ILProcessor RewriteBody(MethodDefinition method)
+        private ILProcessor RewriteBody(MethodDefinition method)
         {
+            APUtilities.Patched(logger, error: false, diagnostic: null, nameof(UpdateEngineProcessor), method);
             method.Body = new MethodBody(method);
             return method.Body.GetILProcessor();
         }
@@ -92,12 +94,14 @@ namespace Stride.Core.AssemblyProcessor
         /// </summary>
         abstract class UpdatablePropertyBaseCodeGenerator
         {
+            protected readonly UpdateEngineProcessor processor;
             protected readonly AssemblyDefinition assembly;
             protected TypeDefinition declaringType;
 
-            public UpdatablePropertyBaseCodeGenerator(AssemblyDefinition assembly)
+            public UpdatablePropertyBaseCodeGenerator(AssemblyDefinition assembly, UpdateEngineProcessor processor)
             {
                 this.assembly = assembly;
+                this.processor = processor;
             }
 
             public abstract void EmitGetCode(ILProcessor il, TypeReference type);
@@ -111,7 +115,7 @@ namespace Stride.Core.AssemblyProcessor
             public virtual void GenerateUpdatablePropertyCode()
             {
                 // UpdatableProperty.GetStructAndUnbox
-                var getStructAndUnbox = RewriteBody(declaringType.Methods.First(x => x.Name == "GetStructAndUnbox"));
+                var getStructAndUnbox = processor.RewriteBody(declaringType.Methods.First(x => x.Name == "GetStructAndUnbox"));
                 getStructAndUnbox.Emit(OpCodes.Ldarg, getStructAndUnbox.Body.Method.Parameters[1]);
                 //getStructAndUnbox.Emit(OpCodes.Call, assembly.MainModule.ImportReference(unbox).MakeGenericMethod(declaringType.GenericParameters[0]));
                 getStructAndUnbox.Emit(OpCodes.Unbox, declaringType.GenericParameters[0]);
@@ -122,7 +126,7 @@ namespace Stride.Core.AssemblyProcessor
                 getStructAndUnbox.Emit(OpCodes.Ret);
 
                 // UpdatableProperty.GetBlittable
-                var getBlittable = RewriteBody(declaringType.Methods.First(x => x.Name == "GetBlittable"));
+                var getBlittable = processor.RewriteBody(declaringType.Methods.First(x => x.Name == "GetBlittable"));
                 getBlittable.Emit(OpCodes.Ldarg, getBlittable.Body.Method.Parameters[1]);
                 getBlittable.Emit(OpCodes.Ldarg, getBlittable.Body.Method.Parameters[0]);
                 EmitGetCode(getBlittable, declaringType.GenericParameters[0]);
@@ -130,7 +134,7 @@ namespace Stride.Core.AssemblyProcessor
                 getBlittable.Emit(OpCodes.Ret);
 
                 // UpdatableProperty.SetStruct
-                var setStruct = RewriteBody(declaringType.Methods.First(x => x.Name == "SetStruct"));
+                var setStruct = processor.RewriteBody(declaringType.Methods.First(x => x.Name == "SetStruct"));
                 setStruct.Emit(OpCodes.Ldarg, setStruct.Body.Method.Parameters[0]);
                 EmitSetCodeBeforeValue(setStruct, declaringType.GenericParameters[0]);
                 setStruct.Emit(OpCodes.Ldarg, setStruct.Body.Method.Parameters[1]);
@@ -139,7 +143,7 @@ namespace Stride.Core.AssemblyProcessor
                 setStruct.Emit(OpCodes.Ret);
 
                 // UpdatableProperty.SetBlittable
-                var setBlittable = RewriteBody(declaringType.Methods.First(x => x.Name == "SetBlittable"));
+                var setBlittable = processor.RewriteBody(declaringType.Methods.First(x => x.Name == "SetBlittable"));
                 setBlittable.Emit(OpCodes.Ldarg, setBlittable.Body.Method.Parameters[0]);
                 EmitSetCodeBeforeValue(setBlittable, declaringType.GenericParameters[0]);
                 setBlittable.Emit(OpCodes.Ldarg, setBlittable.Body.Method.Parameters[1]);
@@ -157,7 +161,7 @@ namespace Stride.Core.AssemblyProcessor
             private readonly FieldDefinition updatablePropertyVirtualDispatchSetter;
             protected TypeDefinition declaringTypeForObjectMethods;
 
-            public UpdatablePropertyCodeGenerator(AssemblyDefinition assembly) : base(assembly)
+            public UpdatablePropertyCodeGenerator(AssemblyDefinition assembly, UpdateEngineProcessor processor) : base(assembly, processor)
             {
                 // GetObject/SetObject are on the non-generic implementation
                 declaringTypeForObjectMethods = assembly.MainModule.GetType("Stride.Updater.UpdatableProperty");
@@ -174,13 +178,13 @@ namespace Stride.Core.AssemblyProcessor
                 // For UpdatableProperty, GetObject/SetObject are declared on another type
 
                 // UpdatableProperty.GetObject
-                var getObject = RewriteBody(declaringTypeForObjectMethods.Methods.First(x => x.Name == "GetObject"));
+                var getObject = processor.RewriteBody(declaringTypeForObjectMethods.Methods.First(x => x.Name == "GetObject"));
                 getObject.Emit(OpCodes.Ldarg, getObject.Body.Method.Parameters[0]);
                 EmitGetCode(getObject, assembly.MainModule.TypeSystem.Object);
                 getObject.Emit(OpCodes.Ret);
 
                 // UpdatableProperty.SetObject
-                var setObject = RewriteBody(declaringTypeForObjectMethods.Methods.First(x => x.Name == "SetObject"));
+                var setObject = processor.RewriteBody(declaringTypeForObjectMethods.Methods.First(x => x.Name == "SetObject"));
                 setObject.Emit(OpCodes.Ldarg, setObject.Body.Method.Parameters[0]);
                 EmitSetCodeBeforeValue(setObject, assembly.MainModule.TypeSystem.Object);
                 setObject.Emit(OpCodes.Ldarg, setObject.Body.Method.Parameters[1]);
@@ -237,7 +241,7 @@ namespace Stride.Core.AssemblyProcessor
 
         abstract class UpdatableCustomPropertyCodeGenerator : UpdatablePropertyBaseCodeGenerator
         {
-            public UpdatableCustomPropertyCodeGenerator(AssemblyDefinition assembly) : base(assembly)
+            public UpdatableCustomPropertyCodeGenerator(AssemblyDefinition assembly, UpdateEngineProcessor processor) : base(assembly, processor)
             {
             }
 
@@ -246,14 +250,14 @@ namespace Stride.Core.AssemblyProcessor
                 // For UpdatableCustomAccessor, GetObject/SetObject are declared in the generic type
 
                 // UpdatableProperty.GetObject
-                var getObject = RewriteBody(declaringType.Methods.First(x => x.Name == "GetObject"));
+                var getObject = processor.RewriteBody(declaringType.Methods.First(x => x.Name == "GetObject"));
                 getObject.Emit(OpCodes.Ldarg, getObject.Body.Method.Parameters[0]);
                 EmitGetCode(getObject, declaringType.GenericParameters[0]);
                 getObject.Emit(OpCodes.Box, declaringType.GenericParameters[0]); // Required for Windows 10 AOT
                 getObject.Emit(OpCodes.Ret);
 
                 // UpdatableProperty.SetObject
-                var setObject = RewriteBody(declaringType.Methods.First(x => x.Name == "SetObject"));
+                var setObject = processor.RewriteBody(declaringType.Methods.First(x => x.Name == "SetObject"));
                 setObject.Emit(OpCodes.Ldarg, setObject.Body.Method.Parameters[0]);
                 EmitSetCodeBeforeValue(setObject, declaringType.GenericParameters[0]);
                 setObject.Emit(OpCodes.Ldarg, setObject.Body.Method.Parameters[1]);
@@ -271,7 +275,7 @@ namespace Stride.Core.AssemblyProcessor
             private readonly MethodReference ilistGetItem;
             private readonly MethodReference ilistSetItem;
 
-            public UpdatableListCodeGenerator(AssemblyDefinition assembly) : base(assembly)
+            public UpdatableListCodeGenerator(AssemblyDefinition assembly, UpdateEngineProcessor processor) : base(assembly, processor)
             {
                 declaringType = assembly.MainModule.GetType("Stride.Updater.UpdatableListAccessor`1");
                 indexField = assembly.MainModule.GetType("Stride.Updater.UpdatableListAccessor").Fields.First(x => x.Name == "Index");

@@ -12,6 +12,7 @@ namespace Stride.Core.AssemblyProcessor
     /// <summary>
     /// Makes the assembly use AsyncBridge instead of mscorlib for async.
     /// </summary>
+    [Obsolete("Not used.")]
     internal class AsyncBridgeProcessor : IAssemblyDefinitionProcessor
     {
         private AssemblyDefinition assembly;

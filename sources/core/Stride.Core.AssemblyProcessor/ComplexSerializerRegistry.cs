@@ -112,7 +112,7 @@ namespace Stride.Core.AssemblyProcessor
             processors.Add(new PropertyKeySerializerProcessor());
 
             // Update Engine (with AnimationData<T>)
-            processors.Add(new UpdateEngineProcessor());
+            processors.Add(new UpdateEngineProcessor(log));
 
             // Profile serializers
             processors.Add(new ProfileSerializerProcessor());

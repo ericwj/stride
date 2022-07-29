@@ -577,7 +577,12 @@ namespace Stride.Core.AssemblyProcessor
     {
         public static unsafe void Write(this ObjectIdBuilder objectIdBuilder, int i)
         {
-            objectIdBuilder.Write((byte*)&i, sizeof(int));
+#warning Error CS1615 Argument 1 may not be passed with the 'ref' keyword - needs a futute commit
+            #if false
+            objectIdBuilder.Write(ref Unsafe.As<int, byte>(ref i), sizeof(int));
+            #else
+            objectIdBuilder.Write(BitConverter.GetBytes(i));
+            #endif
         }
         public static unsafe void Write(this ObjectIdBuilder objectIdBuilder, bool b)
         {

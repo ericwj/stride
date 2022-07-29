@@ -55,6 +55,7 @@ namespace Stride.Core.AssemblyProcessor
 
                             if (variable != null && variable.VariableType.IsPointer)
                             {
+                                APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(MonoFixedProcessor), method, instruction);
                                 // We are in a fixed instruction, let's fix it
                                 instruction.OpCode = OpCodes.Conv_I;
                                 changed = true;

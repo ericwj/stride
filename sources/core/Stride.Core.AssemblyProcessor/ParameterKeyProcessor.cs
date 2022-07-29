@@ -142,6 +142,7 @@ namespace Stride.Core.AssemblyProcessor
                 if (cctorModified)
                 {
                     effectKeysStaticConstructors.Add(cctor);
+                    APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(NotifyPropertyProcessor), cctor, additionalInfo: "The method was added.");
                 }
             }
 
@@ -217,6 +218,7 @@ namespace Stride.Core.AssemblyProcessor
 
                 il.Append(newReturnInstruction);
                 staticConstructor.Body.OptimizeMacros();
+                APUtilities.Patched(context.Log, error: false, diagnostic: null, nameof(NotifyPropertyProcessor), staticConstructor, additionalInfo: "The method was added.");
             }
 
             return true;

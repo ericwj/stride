@@ -6,16 +6,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.Versioning;
 using System.Text;
-using System.Text.RegularExpressions;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Mdb;
 using Mono.Cecil.Pdb;
 using Mono.Cecil.Rocks;
-using Stride.Core;
 using Stride.Core.Storage;
 using MethodAttributes = Mono.Cecil.MethodAttributes;
 using TypeAttributes = Mono.Cecil.TypeAttributes;
@@ -43,7 +39,7 @@ namespace Stride.Core.AssemblyProcessor
             MemoryReferences = new List<AssemblyDefinition>();
             ModuleInitializer = true;
         }
-
+        public bool AssemblyVersion { get; set; }
         public bool AutoNotifyProperty { get; set; }
 
         public bool ParameterKey { get; set; }
@@ -218,7 +214,9 @@ namespace Stride.Core.AssemblyProcessor
                 processors.Add(new InteropProcessor());
                 processors.Add(new MonoFixedProcessor());
 
-                processors.Add(new AssemblyVersionProcessor());
+                if (AssemblyVersion) {
+                    processors.Add(new AssemblyVersionProcessor());
+                }
 
                 if (DocumentationFile != null)
                 {
