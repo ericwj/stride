@@ -8,7 +8,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
-    <StrideAssemblyProcessorOptions>--serialization</StrideAssemblyProcessorOptions>
+    <StrideAssemblyProcessorOptions>--assembly-version --serialization</StrideAssemblyProcessorOptions>
     <StrideBuildTags>*</StrideBuildTags>
   </PropertyGroup>
   <ItemGroup>

@@ -10,7 +10,7 @@
   <PropertyGroup>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
-    <StrideAssemblyProcessorOptions>--serialization</StrideAssemblyProcessorOptions>
+    <StrideAssemblyProcessorOptions>--assembly-version --serialization</StrideAssemblyProcessorOptions>
     <StrideBuildTags>*</StrideBuildTags>
     <StrideCodeAnalysis>true</StrideCodeAnalysis>
   </PropertyGroup>

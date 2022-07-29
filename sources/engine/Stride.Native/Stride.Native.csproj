@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project>
   <PropertyGroup>
     <StrideRuntime>true</StrideRuntime>
@@ -10,7 +10,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
-    <StrideAssemblyProcessorOptions>--serialization --parameter-key</StrideAssemblyProcessorOptions>
+    <StrideAssemblyProcessorOptions>--assembly-version --serialization --parameter-key</StrideAssemblyProcessorOptions>
     <StrideBuildTags>*</StrideBuildTags>
   </PropertyGroup>
   <ItemGroup>
@@ -27,7 +27,7 @@
     </None>
     <None Include="StrideNative.h" />
     <None Include="LinuxAllocator.cpp" />
-	<None Include="FastTextRenderer\FastTextRenderer.c" />
+    <None Include="FastTextRenderer\FastTextRenderer.c" />
     <None Include="Sprite\SpriteBatchNative.c" />
     <None Include="DirectInput\XInputChecker.cpp" />
     <None Include="Lightprobes\predicates.c" />

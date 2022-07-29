@@ -107,7 +107,7 @@
 
     <!--Add platform and target framework to assembly processor options-->
     <PropertyGroup>
-      <StrideAssemblyProcessorOptions>--platform=$(StridePlatform) --targetFramework=$(TargetFrameworkVersion) $(StrideAssemblyProcessorOptions)</StrideAssemblyProcessorOptions>
+      <StrideAssemblyProcessorOptions>--assembly-version --platform=$(StridePlatform) --targetFramework=$(TargetFrameworkVersion) $(StrideAssemblyProcessorOptions)</StrideAssemblyProcessorOptions>
       <StrideAssemblyProcessorOptions>$(StrideAssemblyProcessorOptions) --references-file="$(IntermediateOutputPath)StrideReferences.cache"</StrideAssemblyProcessorOptions>
       <StrideAssemblyProcessorOptions Condition="'$(AssemblyOriginatorKeyFile)' != ''">$(StrideAssemblyProcessorOptions) --signkeyfile="$(AssemblyOriginatorKeyFile)"</StrideAssemblyProcessorOptions>
       <StrideAssemblyProcessorOptions Condition="'$(DocumentationFile)' != ''">$(StrideAssemblyProcessorOptions) --docfile="$(DocumentationFile)"</StrideAssemblyProcessorOptions>

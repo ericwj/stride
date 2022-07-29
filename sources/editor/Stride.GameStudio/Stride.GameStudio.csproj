@@ -15,7 +15,7 @@
     <RestorePackages>true</RestorePackages>
     <AssemblyName>Stride.GameStudio</AssemblyName>
     <StrideAssemblyProcessor>true</StrideAssemblyProcessor>
-    <StrideAssemblyProcessorOptions>--auto-module-initializer</StrideAssemblyProcessorOptions>
+    <StrideAssemblyProcessorOptions>--assembly-version --auto-module-initializer</StrideAssemblyProcessorOptions>
     <StrideLocalized>true</StrideLocalized>
     <StrideNuGetResolverUX>true</StrideNuGetResolverUX>
     <StrideSTAThreadOnMain>true</StrideSTAThreadOnMain>
